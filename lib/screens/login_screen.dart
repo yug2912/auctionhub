@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../data/firestore_helper.dart';
 import 'main_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -77,7 +78,7 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  // Register new account
+  // Register new account + save to Firestore
   void _register() async {
     if (_formKey.currentState!.validate()) {
       setState(() => _isLoading = true);
@@ -85,6 +86,11 @@ class _LoginScreenState extends State<LoginScreen> {
         await FirebaseAuth.instance.createUserWithEmailAndPassword(
           email: _emailController.text.trim(),
           password: _passwordController.text.trim(),
+        );
+        // Save user profile to Firestore automatically
+        await FirestoreHelper.instance.saveUser(
+          _emailController.text.trim().split('@')[0],
+          _emailController.text.trim(),
         );
         if (mounted) {
           Navigator.pushReplacement(
