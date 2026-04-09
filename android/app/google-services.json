@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "889741314744",
+    "project_id": "auctionhub-eb094",
+    "storage_bucket": "auctionhub-eb094.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:889741314744:android:a5bbb020866299038f824d",
+        "android_client_info": {
+          "package_name": "com.example.auction_hub"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAmk3lYYpfA13HBQIJbeNxnCVtsVq2q0Bo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
