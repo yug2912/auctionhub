@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'main_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -22,28 +23,96 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
+  // Email/Password Login
   void _login() async {
     if (_formKey.currentState!.validate()) {
       setState(() => _isLoading = true);
-      await Future.delayed(const Duration(seconds: 1));
+      try {
+        await FirebaseAuth.instance.signInWithEmailAndPassword(
+          email: _emailController.text.trim(),
+          password: _passwordController.text.trim(),
+        );
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const MainScreen()),
+          );
+        }
+      } on FirebaseAuthException catch (e) {
+        String message = 'Login failed';
+        if (e.code == 'user-not-found')
+          message = 'No account found with this email';
+        if (e.code == 'wrong-password') message = 'Wrong password';
+        if (e.code == 'invalid-email') message = 'Invalid email address';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message), backgroundColor: Colors.red),
+        );
+      } finally {
+        if (mounted) setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  // Google Sign In
+  void _googleSignIn() async {
+    setState(() => _isLoading = true);
+    try {
+      GoogleAuthProvider googleProvider = GoogleAuthProvider();
+      await FirebaseAuth.instance.signInWithPopup(googleProvider);
       if (mounted) {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (_) => const MainScreen()),
         );
       }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Google sign in failed: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  // Register new account
+  void _register() async {
+    if (_formKey.currentState!.validate()) {
+      setState(() => _isLoading = true);
+      try {
+        await FirebaseAuth.instance.createUserWithEmailAndPassword(
+          email: _emailController.text.trim(),
+          password: _passwordController.text.trim(),
+        );
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const MainScreen()),
+          );
+        }
+      } on FirebaseAuthException catch (e) {
+        String message = 'Registration failed';
+        if (e.code == 'email-already-in-use')
+          message = 'Email already registered';
+        if (e.code == 'weak-password')
+          message = 'Password must be at least 6 characters';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message), backgroundColor: Colors.red),
+        );
+      } finally {
+        if (mounted) setState(() => _isLoading = false);
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
     return Scaffold(
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // Header
             Container(
               width: double.infinity,
               color: const Color(0xFF1A237E),
@@ -54,27 +123,23 @@ class _LoginScreenState extends State<LoginScreen> {
                     width: 70,
                     height: 70,
                     decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(18),
-                    ),
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(18)),
                     child: const Center(
-                      child: Text('🔨', style: TextStyle(fontSize: 34)),
-                    ),
+                        child: Text('🔨', style: TextStyle(fontSize: 34))),
                   ),
                   const SizedBox(height: 16),
-                  const Text('Welcome Back',
+                  const Text('AuctionHub',
                       style: TextStyle(
                           color: Colors.white,
                           fontSize: 22,
                           fontWeight: FontWeight.w600)),
                   const SizedBox(height: 4),
-                  const Text('Sign in to your AuctionHub account',
+                  const Text('Sign in to your account',
                       style: TextStyle(color: Color(0xFF9FA8DA), fontSize: 13)),
                 ],
               ),
             ),
-
-            // Form
             Padding(
               padding: const EdgeInsets.all(24),
               child: Form(
@@ -83,12 +148,15 @@ class _LoginScreenState extends State<LoginScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const SizedBox(height: 8),
-                    const Text('Email', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+                    const Text('Email',
+                        style: TextStyle(
+                            fontSize: 13, fontWeight: FontWeight.w500)),
                     const SizedBox(height: 6),
                     TextFormField(
                       controller: _emailController,
                       keyboardType: TextInputType.emailAddress,
-                      decoration: _inputDecor('Enter your email', Icons.email_outlined),
+                      decoration:
+                          _inputDecor('Enter your email', Icons.email_outlined),
                       validator: (v) {
                         if (v == null || v.isEmpty) return 'Email is required';
                         if (!v.contains('@')) return 'Enter a valid email';
@@ -96,39 +164,43 @@ class _LoginScreenState extends State<LoginScreen> {
                       },
                     ),
                     const SizedBox(height: 16),
-                    const Text('Password', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+                    const Text('Password',
+                        style: TextStyle(
+                            fontSize: 13, fontWeight: FontWeight.w500)),
                     const SizedBox(height: 6),
                     TextFormField(
                       controller: _passwordController,
                       obscureText: _obscurePassword,
-                      decoration: _inputDecor('Enter your password', Icons.lock_outline).copyWith(
+                      decoration:
+                          _inputDecor('Enter your password', Icons.lock_outline)
+                              .copyWith(
                         suffixIcon: IconButton(
-                          icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility),
-                          onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                          icon: Icon(_obscurePassword
+                              ? Icons.visibility_off
+                              : Icons.visibility),
+                          onPressed: () => setState(
+                              () => _obscurePassword = !_obscurePassword),
                         ),
                       ),
                       validator: (v) {
-                        if (v == null || v.isEmpty) return 'Password is required';
-                        if (v.length < 6) return 'Password must be at least 6 characters';
+                        if (v == null || v.isEmpty)
+                          return 'Password is required';
+                        if (v.length < 6)
+                          return 'Password must be at least 6 characters';
                         return null;
                       },
                     ),
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: TextButton(
-                        onPressed: () {},
-                        child: const Text('Forgot Password?'),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 20),
                     SizedBox(
                       width: double.infinity,
                       height: 50,
                       child: FilledButton(
                         onPressed: _isLoading ? null : _login,
                         child: _isLoading
-                            ? const CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
-                            : const Text('Sign In', style: TextStyle(fontSize: 15)),
+                            ? const CircularProgressIndicator(
+                                color: Colors.white, strokeWidth: 2)
+                            : const Text('Sign In',
+                                style: TextStyle(fontSize: 15)),
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -136,27 +208,29 @@ class _LoginScreenState extends State<LoginScreen> {
                       width: double.infinity,
                       height: 50,
                       child: OutlinedButton.icon(
-                        onPressed: _login,
-                        icon: const Text('G', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.red)),
+                        onPressed: _isLoading ? null : _googleSignIn,
+                        icon: const Text('G',
+                            style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.red)),
                         label: const Text('Continue with Google'),
                       ),
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 50,
+                      child: OutlinedButton(
+                        onPressed: _isLoading ? null : _register,
+                        child: const Text('Create New Account'),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
                     Center(
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Text("Don't have an account? ",
-                              style: TextStyle(color: Colors.grey, fontSize: 13)),
-                          GestureDetector(
-                            onTap: _login,
-                            child: Text('Sign Up',
-                                style: TextStyle(
-                                    color: scheme.primary,
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 13)),
-                          ),
-                        ],
+                      child: TextButton(
+                        onPressed: () {},
+                        child: const Text('Forgot Password?'),
                       ),
                     ),
                   ],
@@ -175,21 +249,16 @@ class _LoginScreenState extends State<LoginScreen> {
       prefixIcon: Icon(icon, size: 20),
       filled: true,
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide.none,
-      ),
+          borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: Colors.grey.shade300),
-      ),
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey.shade300)),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Color(0xFF1A237E), width: 1.5),
-      ),
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Color(0xFF1A237E), width: 1.5)),
       errorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Colors.red),
-      ),
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Colors.red)),
       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
     );
   }
