@@ -18,10 +18,36 @@ class FirestoreHelper {
     required double startingBid,
     required double priceIncrement,
     required String location,
-    required String endTime,
+    required String duration,
     String imageUrl = 'none',
   }) async {
     final user = _auth.currentUser;
+
+    // Calculate exact end time based on duration chosen
+    DateTime endDateTime;
+    switch (duration) {
+      case '1 hour':
+        endDateTime = DateTime.now().add(const Duration(hours: 1));
+        break;
+      case '6 hours':
+        endDateTime = DateTime.now().add(const Duration(hours: 6));
+        break;
+      case '12 hours':
+        endDateTime = DateTime.now().add(const Duration(hours: 12));
+        break;
+      case '24 hours':
+        endDateTime = DateTime.now().add(const Duration(hours: 24));
+        break;
+      case '3 days':
+        endDateTime = DateTime.now().add(const Duration(days: 3));
+        break;
+      case '7 days':
+        endDateTime = DateTime.now().add(const Duration(days: 7));
+        break;
+      default:
+        endDateTime = DateTime.now().add(const Duration(hours: 24));
+    }
+
     final doc = _db.collection('auctions').doc();
     await doc.set({
       'id': doc.id,
@@ -32,7 +58,8 @@ class FirestoreHelper {
       'currentBid': startingBid,
       'priceIncrement': priceIncrement,
       'location': location,
-      'endTime': endTime,
+      'duration': duration,
+      'endTime': endDateTime.toIso8601String(),
       'imageUrl': imageUrl,
       'sellerId': user?.uid ?? 'unknown',
       'sellerName': user?.displayName ?? user?.email ?? 'Unknown',
@@ -165,5 +192,19 @@ class FirestoreHelper {
     if (user == null) return null;
     final doc = await _db.collection('users').doc(user.uid).get();
     return doc.exists ? doc.data() : null;
+  }
+
+  // Calculate time left for frontend to display
+  String getTimeLeft(String endTimeStr) {
+    final endTime = DateTime.parse(endTimeStr);
+    final now = DateTime.now();
+    final diff = endTime.difference(now);
+
+    if (diff.isNegative) return 'Ended';
+    if (diff.inDays > 0) return '${diff.inDays}d ${diff.inHours % 24}h left';
+    if (diff.inHours > 0)
+      return '${diff.inHours}h ${diff.inMinutes % 60}m left';
+    if (diff.inMinutes > 0) return '${diff.inMinutes}m left';
+    return 'Ending soon';
   }
 }
