@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../main.dart';
 import 'login_screen.dart';
 import 'won_auctions_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -221,14 +222,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   SizedBox(
                     width: double.infinity,
                     child: OutlinedButton.icon(
-                      onPressed: () {
-                        Navigator.pushAndRemoveUntil(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const LoginScreen(),
-                          ),
-                          (_) => false,
-                        );
+                      onPressed: () async {
+                        await FirebaseAuth.instance.signOut();
+                        if (mounted) {
+                          Navigator.pushAndRemoveUntil(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => const LoginScreen()),
+                            (_) => false,
+                          );
+                        }
                       },
                       icon: const Icon(Icons.logout, color: Colors.red),
                       label: const Text(
