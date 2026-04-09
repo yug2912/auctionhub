@@ -207,4 +207,13 @@ class FirestoreHelper {
     if (diff.inMinutes > 0) return '${diff.inMinutes}m left';
     return 'Ending soon';
   }
+
+  // Get total number of bids for an auction
+  Future<int> getTotalBids(String auctionId) async {
+    final snapshot = await _db
+        .collection('bids')
+        .where('auctionId', isEqualTo: auctionId)
+        .get();
+    return snapshot.docs.length;
+  }
 }
