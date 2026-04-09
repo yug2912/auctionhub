@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../main.dart';
 import 'login_screen.dart';
+import 'won_auctions_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -99,6 +100,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     onTap: () {},
                   ),
                   _settingsTile(Icons.history, 'Bid History', onTap: () {}),
+                  _settingsTile(Icons.emoji_events, 'Won Auctions', onTap: () {
+                    Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const WonAuctionsScreen()));
+                  }),
                   _settingsTile(
                     Icons.favorite_outline,
                     'Saved Items',
@@ -149,9 +156,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         value: _isDark,
                         onChanged: (val) {
                           setState(() => _isDark = val);
-                          themeNotifier.value = val
-                              ? ThemeMode.dark
-                              : ThemeMode.light;
+                          themeNotifier.value =
+                              val ? ThemeMode.dark : ThemeMode.light;
                         },
                       ),
                     ),
