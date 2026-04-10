@@ -11,32 +11,23 @@ class SplashScreen extends StatefulWidget {
 class _SplashScreenState extends State<SplashScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
-  late Animation<double> _scaleAnimation;
   late Animation<double> _fadeAnimation;
+  late Animation<double> _scaleAnimation;
 
   @override
   void initState() {
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1200),
-    );
-    _scaleAnimation = Tween<double>(begin: 0.5, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.elasticOut),
+      duration: const Duration(milliseconds: 1500),
     );
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeIn),
     );
+    _scaleAnimation = Tween<double>(begin: 0.7, end: 1.0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.elasticOut),
+    );
     _controller.forward();
-
-    Future.delayed(const Duration(seconds: 3), () {
-      if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const LoginScreen()),
-        );
-      }
-    });
   }
 
   @override
@@ -48,61 +39,104 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF1A237E),
-      body: Center(
-        child: FadeTransition(
-          opacity: _fadeAnimation,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              ScaleTransition(
-                scale: _scaleAnimation,
-                child: Container(
-                  width: 110,
-                  height: 110,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(28),
+      backgroundColor: const Color(0xFF0A0E2A),
+      body: FadeTransition(
+        opacity: _fadeAnimation,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            // Top orange bar
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 20),
+              color: const Color(0xFFFF6B00),
+              child: const SafeArea(
+                child: Center(
+                  child: Text(
+                    'Auction Hub',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 24,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 1,
+                    ),
                   ),
-                  child: const Center(
-                    child: Text('🔨', style: TextStyle(fontSize: 52)),
+                ),
+              ),
+            ),
+
+            // Center content
+            ScaleTransition(
+              scale: _scaleAnimation,
+              child: Column(
+                children: [
+                  // Logo image
+                  Image.asset(
+                    'assets/logo.png',
+                    width: 160,
+                    height: 160,
                   ),
-                ),
+                  const SizedBox(height: 24),
+                  const Text(
+                    'Welcome To\nAuction Hub',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 26,
+                      fontWeight: FontWeight.w600,
+                      height: 1.4,
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 24),
-              const Text(
-                'AuctionHub',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 32,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: -0.5,
-                ),
+            ),
+
+            // Bottom section
+            Padding(
+              padding: const EdgeInsets.only(bottom: 50),
+              child: Column(
+                children: [
+                  // Get Started button
+                  SizedBox(
+                    width: 220,
+                    height: 52,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => const LoginScreen()),
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFFF6B00),
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: const Text(
+                        'Get Started',
+                        style: TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  // Tagline
+                  const Text(
+                    'Bid.Win.Save',
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: 14,
+                      letterSpacing: 2,
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 8),
-              const Text(
-                'Bid. Win. Celebrate.',
-                style: TextStyle(
-                  color: Color(0xFF9FA8DA),
-                  fontSize: 15,
-                ),
-              ),
-              const SizedBox(height: 60),
-              const CircularProgressIndicator(
-                color: Colors.white,
-                strokeWidth: 2,
-              ),
-              const SizedBox(height: 80),
-              const Text(
-                'Group 6 — PROG2436',
-                style: TextStyle(color: Color(0xFF7986CB), fontSize: 12),
-              ),
-              const Text(
-                'Arsh  •  Jay  •  Shiv  •  Yug',
-                style: TextStyle(color: Color(0xFF7986CB), fontSize: 12),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
