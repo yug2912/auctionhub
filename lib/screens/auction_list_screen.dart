@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../data/database_helper.dart';
+import '../data/firestore_helper.dart';
 import '../models/auction_model.dart';
 import 'auction_detail_screen.dart';
 
@@ -17,7 +18,16 @@ class _AuctionListScreenState extends State<AuctionListScreen> {
   String _searchQuery = '';
   bool _loading = true;
 
-  final List<String> _categories = ['All', 'Electronics', 'Jewelry', 'Watches', 'Furniture', 'Art', 'Sports'];
+  final List<String> _categories = [
+    'All',
+    'Electronics',
+    'Jewelry',
+    'Watches',
+    'Furniture',
+    'Art',
+    'Cars',
+    'Fashion'
+  ];
 
   @override
   void initState() {
@@ -25,20 +35,83 @@ class _AuctionListScreenState extends State<AuctionListScreen> {
     _load();
   }
 
+  String _getEmoji(String category) {
+    switch (category) {
+      case 'Electronics':
+        return '💻';
+      case 'Jewelry':
+        return '💍';
+      case 'Watches':
+        return '⌚';
+      case 'Furniture':
+        return '🪑';
+      case 'Art':
+        return '🎨';
+      case 'Cars':
+        return '🚗';
+      case 'Fashion':
+        return '👗';
+      default:
+        return '🏷️';
+    }
+  }
+
   Future<void> _load() async {
-    final data = await DatabaseHelper.instance.getAllAuctions();
-    setState(() {
-      _all = data;
-      _filtered = data;
-      _loading = false;
-    });
+    try {
+      final firestoreData = await FirestoreHelper.instance.getAllAuctions();
+      if (firestoreData.isNotEmpty) {
+        final auctionList = firestoreData.map((map) {
+          String timeLeft = 'Active';
+          try {
+            final endTimeStr = map['endTime'] ?? '';
+            if (endTimeStr.isNotEmpty && endTimeStr != '24 hours') {
+              timeLeft = FirestoreHelper.instance.getTimeLeft(endTimeStr);
+            }
+          } catch (e) {
+            timeLeft = 'Active';
+          }
+          return Auction(
+            id: map['id'].toString().hashCode,
+            title: map['title']?.toString() ?? 'Unknown',
+            category: map['category']?.toString() ?? 'Other',
+            description: map['description']?.toString() ?? '',
+            startingPrice: (map['startingBid'] ?? 0).toDouble(),
+            currentBid: (map['currentBid'] ?? 0).toDouble(),
+            endTime: timeLeft,
+            sellerName: map['sellerName']?.toString() ?? 'Unknown',
+            emoji: _getEmoji(map['category']?.toString() ?? ''),
+          );
+        }).toList();
+        setState(() {
+          _all = auctionList;
+          _filtered = auctionList;
+          _loading = false;
+        });
+      } else {
+        final data = await DatabaseHelper.instance.getAllAuctions();
+        setState(() {
+          _all = data;
+          _filtered = data;
+          _loading = false;
+        });
+      }
+    } catch (e) {
+      final data = await DatabaseHelper.instance.getAllAuctions();
+      setState(() {
+        _all = data;
+        _filtered = data;
+        _loading = false;
+      });
+    }
   }
 
   void _applyFilter() {
     setState(() {
       _filtered = _all.where((a) {
-        final matchCat = _selectedCategory == 'All' || a.category == _selectedCategory;
-        final matchSearch = a.title.toLowerCase().contains(_searchQuery.toLowerCase());
+        final matchCat =
+            _selectedCategory == 'All' || a.category == _selectedCategory;
+        final matchSearch =
+            a.title.toLowerCase().contains(_searchQuery.toLowerCase());
         return matchCat && matchSearch;
       }).toList();
     });
@@ -46,152 +119,204 @@ class _AuctionListScreenState extends State<AuctionListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final textPrimary = Theme.of(context).textTheme.bodyLarge?.color;
+    final textSecondary = Theme.of(context).textTheme.bodySmall?.color;
+    final cardColor = Theme.of(context).cardColor;
+    final bgColor = Theme.of(context).scaffoldBackgroundColor;
+
     return Scaffold(
+      backgroundColor: bgColor,
       appBar: AppBar(
-        title: const Text('All Auctions', style: TextStyle(fontWeight: FontWeight.w600)),
-        centerTitle: false,
-        elevation: 0,
+        backgroundColor: const Color(0xFFFF6B00),
+        iconTheme: const IconThemeData(color: Colors.white),
+        title: const Text('All Auctions',
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(
+              child: CircularProgressIndicator(color: Color(0xFFFF6B00)))
           : Column(
               children: [
+                // Search
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                  padding: const EdgeInsets.all(16),
                   child: TextField(
                     onChanged: (v) {
                       _searchQuery = v;
                       _applyFilter();
                     },
+                    style: TextStyle(color: textPrimary),
                     decoration: InputDecoration(
                       hintText: 'Search auctions...',
-                      prefixIcon: const Icon(Icons.search),
+                      hintStyle: TextStyle(color: textSecondary),
+                      prefixIcon: Icon(Icons.search, color: textSecondary),
                       filled: true,
+                      fillColor: cardColor,
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
+                        borderRadius: BorderRadius.circular(30),
                         borderSide: BorderSide.none,
                       ),
                       contentPadding: const EdgeInsets.symmetric(vertical: 12),
                     ),
                   ),
                 ),
+
+                // Categories
                 SizedBox(
-                  height: 44,
+                  height: 40,
                   child: ListView.builder(
                     scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
                     itemCount: _categories.length,
                     itemBuilder: (_, i) {
                       final cat = _categories[i];
-                      final selected = cat == _selectedCategory;
-                      return Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: FilterChip(
-                          label: Text(cat),
-                          selected: selected,
-                          onSelected: (_) {
-                            _selectedCategory = cat;
-                            _applyFilter();
-                          },
+                      final isSelected = cat == _selectedCategory;
+                      return GestureDetector(
+                        onTap: () {
+                          setState(() => _selectedCategory = cat);
+                          _applyFilter();
+                        },
+                        child: Container(
+                          margin: const EdgeInsets.only(right: 8),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: isSelected
+                                ? const Color(0xFFFF6B00)
+                                : cardColor,
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: isSelected
+                                  ? const Color(0xFFFF6B00)
+                                  : Colors.white24,
+                            ),
+                          ),
+                          child: Text(
+                            cat,
+                            style: TextStyle(
+                              color: isSelected ? Colors.white : textSecondary,
+                              fontSize: 12,
+                              fontWeight: isSelected
+                                  ? FontWeight.w600
+                                  : FontWeight.w400,
+                            ),
+                          ),
                         ),
                       );
                     },
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 8),
+
+                // List
                 Expanded(
                   child: _filtered.isEmpty
-                      ? const Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text('🔍', style: TextStyle(fontSize: 40)),
-                              SizedBox(height: 12),
-                              Text('No auctions found',
-                                  style: TextStyle(color: Colors.grey, fontSize: 15)),
-                            ],
-                          ),
-                        )
+                      ? Center(
+                          child: Text('No auctions found',
+                              style: TextStyle(
+                                  color: textSecondary, fontSize: 15)))
                       : ListView.builder(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 8),
                           itemCount: _filtered.length,
                           itemBuilder: (_, i) {
                             final a = _filtered[i];
-                            return Card(
-                              margin: const EdgeInsets.only(bottom: 10),
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(14)),
-                              elevation: 0,
-                              child: ListTile(
-                                contentPadding: const EdgeInsets.all(12),
-                                onTap: () => Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                      builder: (_) => AuctionDetailScreen(auction: a)),
-                                ).then((_) => _load()),
-                                leading: Container(
-                                  width: 56,
-                                  height: 56,
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFE8EAF6),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Center(
-                                    child: Text(a.emoji,
-                                        style: const TextStyle(fontSize: 26)),
-                                  ),
+                            return GestureDetector(
+                              onTap: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (_) =>
+                                        AuctionDetailScreen(auction: a)),
+                              ).then((_) => _load()),
+                              child: Container(
+                                margin: const EdgeInsets.only(bottom: 12),
+                                decoration: BoxDecoration(
+                                  color: cardColor,
+                                  borderRadius: BorderRadius.circular(12),
                                 ),
-                                title: Text(a.title,
-                                    style: const TextStyle(
-                                        fontSize: 14, fontWeight: FontWeight.w600)),
-                                subtitle: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                child: Row(
                                   children: [
-                                    const SizedBox(height: 2),
-                                    Text(a.category,
-                                        style: const TextStyle(
-                                            fontSize: 11, color: Colors.grey)),
-                                    const SizedBox(height: 4),
-                                    Row(
-                                      children: [
-                                        Text(
-                                          '\$${a.currentBid.toStringAsFixed(0)}',
-                                          style: const TextStyle(
-                                              fontSize: 14,
-                                              fontWeight: FontWeight.w700,
-                                              color: Color(0xFF1A237E)),
+                                    Container(
+                                      width: 80,
+                                      height: 80,
+                                      decoration: BoxDecoration(
+                                        color: bgColor,
+                                        borderRadius: const BorderRadius.only(
+                                          topLeft: Radius.circular(12),
+                                          bottomLeft: Radius.circular(12),
                                         ),
-                                        const SizedBox(width: 10),
-                                        const Icon(Icons.timer_outlined,
-                                            size: 12, color: Color(0xFFE65100)),
-                                        const SizedBox(width: 2),
-                                        Text(a.endTime,
-                                            style: const TextStyle(
-                                                fontSize: 11,
-                                                color: Color(0xFFE65100))),
-                                      ],
+                                      ),
+                                      child: Center(
+                                        child: Text(a.emoji,
+                                            style:
+                                                const TextStyle(fontSize: 36)),
+                                      ),
+                                    ),
+                                    Expanded(
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(12),
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(a.title,
+                                                style: TextStyle(
+                                                    color: textPrimary,
+                                                    fontWeight: FontWeight.w600,
+                                                    fontSize: 14)),
+                                            const SizedBox(height: 4),
+                                            Text(a.category,
+                                                style: TextStyle(
+                                                    color: textSecondary,
+                                                    fontSize: 11)),
+                                            const SizedBox(height: 6),
+                                            Row(
+                                              children: [
+                                                Text(
+                                                  '\$${a.currentBid.toStringAsFixed(0)}',
+                                                  style: const TextStyle(
+                                                      color: Color(0xFFFF6B00),
+                                                      fontWeight:
+                                                          FontWeight.w700,
+                                                      fontSize: 15),
+                                                ),
+                                                const SizedBox(width: 10),
+                                                Icon(Icons.timer_outlined,
+                                                    size: 12,
+                                                    color: textSecondary),
+                                                const SizedBox(width: 4),
+                                                Text(a.endTime,
+                                                    style: TextStyle(
+                                                        color: textSecondary,
+                                                        fontSize: 11)),
+                                              ],
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                    Container(
+                                      margin: const EdgeInsets.only(right: 12),
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 8, vertical: 4),
+                                      decoration: BoxDecoration(
+                                        color: a.endTime == 'Ended'
+                                            ? Colors.red.withOpacity(0.2)
+                                            : Colors.green.withOpacity(0.2),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Text(
+                                        a.endTime == 'Ended' ? 'ENDED' : 'LIVE',
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w600,
+                                          color: a.endTime == 'Ended'
+                                              ? Colors.red
+                                              : Colors.green,
+                                        ),
+                                      ),
                                     ),
                                   ],
-                                ),
-                                trailing: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 8, vertical: 4),
-                                  decoration: BoxDecoration(
-                                    color: a.endTime.startsWith('0h')
-                                        ? const Color(0xFFFFF3E0)
-                                        : const Color(0xFFE8F5E9),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Text(
-                                    a.endTime.startsWith('0h') ? 'ENDING' : 'LIVE',
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w600,
-                                      color: a.endTime.startsWith('0h')
-                                          ? const Color(0xFFE65100)
-                                          : const Color(0xFF2E7D32),
-                                    ),
-                                  ),
                                 ),
                               ),
                             );

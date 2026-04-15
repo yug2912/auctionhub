@@ -28,26 +28,38 @@ class _WonAuctionsScreenState extends State<WonAuctionsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final textPrimary = Theme.of(context).textTheme.bodyLarge?.color;
+    final textSecondary = Theme.of(context).textTheme.bodySmall?.color;
+    final cardColor = Theme.of(context).cardColor;
+    final bgColor = Theme.of(context).scaffoldBackgroundColor;
+
     return Scaffold(
+      backgroundColor: bgColor,
       appBar: AppBar(
+        backgroundColor: const Color(0xFFFF6B00),
+        iconTheme: const IconThemeData(color: Colors.white),
         title: const Text('Won Auctions',
-            style: TextStyle(fontWeight: FontWeight.w600)),
-        centerTitle: false,
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(
+              child: CircularProgressIndicator(color: Color(0xFFFF6B00)))
           : _wonAuctions.isEmpty
               ? Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
-                    children: const [
-                      Text('🏆', style: TextStyle(fontSize: 50)),
-                      SizedBox(height: 16),
+                    children: [
+                      const Text('🏆', style: TextStyle(fontSize: 60)),
+                      const SizedBox(height: 16),
                       Text('No won auctions yet',
-                          style: TextStyle(fontSize: 16, color: Colors.grey)),
-                      SizedBox(height: 8),
+                          style: TextStyle(
+                              color: textSecondary,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w500)),
+                      const SizedBox(height: 8),
                       Text('Start bidding to win items!',
-                          style: TextStyle(fontSize: 13, color: Colors.grey)),
+                          style:
+                              TextStyle(color: textSecondary, fontSize: 13)),
                     ],
                   ),
                 )
@@ -56,50 +68,53 @@ class _WonAuctionsScreenState extends State<WonAuctionsScreen> {
                   itemCount: _wonAuctions.length,
                   itemBuilder: (_, i) {
                     final item = _wonAuctions[i];
-                    return Card(
+                    return Container(
                       margin: const EdgeInsets.only(bottom: 12),
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16)),
+                      decoration: BoxDecoration(
+                        color: cardColor,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                       child: Padding(
                         padding: const EdgeInsets.all(12),
                         child: Row(
                           children: [
-                            // Photo or emoji
                             Container(
                               width: 70,
                               height: 70,
                               decoration: BoxDecoration(
-                                color: const Color(0xFFE8EAF6),
+                                color: bgColor,
                                 borderRadius: BorderRadius.circular(12),
                               ),
-                              child: const Center(
-                                child:
-                                    Text('🏆', style: TextStyle(fontSize: 30)),
+                              child: Center(
+                                child: Text(
+                                  item['imageUrl'] ?? '🏆',
+                                  style: const TextStyle(fontSize: 32),
+                                ),
                               ),
                             ),
                             const SizedBox(width: 12),
-                            // Details
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
                                     item['title'] ?? 'Unknown Item',
-                                    style: const TextStyle(
+                                    style: TextStyle(
+                                        color: textPrimary,
                                         fontSize: 14,
                                         fontWeight: FontWeight.w600),
                                   ),
                                   const SizedBox(height: 4),
                                   Row(
                                     children: [
-                                      const Icon(Icons.location_on_outlined,
-                                          size: 13, color: Colors.grey),
+                                      Icon(Icons.location_on_outlined,
+                                          size: 13, color: textSecondary),
                                       const SizedBox(width: 2),
                                       Text(
                                         item['location'] ?? 'Unknown',
-                                        style: const TextStyle(
-                                            fontSize: 12, color: Colors.grey),
+                                        style: TextStyle(
+                                            color: textSecondary,
+                                            fontSize: 12),
                                       ),
                                     ],
                                   ),
@@ -108,20 +123,22 @@ class _WonAuctionsScreenState extends State<WonAuctionsScreen> {
                                     padding: const EdgeInsets.symmetric(
                                         horizontal: 10, vertical: 4),
                                     decoration: BoxDecoration(
-                                      color: const Color(0xFFE8F5E9),
+                                      color: const Color(0xFFFF6B00)
+                                          .withOpacity(0.2),
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                     child: Text(
                                       'Won for \$${item['price']?.toStringAsFixed(0) ?? '0'}',
                                       style: const TextStyle(
+                                          color: Color(0xFFFF6B00),
                                           fontSize: 12,
-                                          fontWeight: FontWeight.w600,
-                                          color: Color(0xFF2E7D32)),
+                                          fontWeight: FontWeight.w600),
                                     ),
                                   ),
                                 ],
                               ),
                             ),
+                            const Text('🏆', style: TextStyle(fontSize: 24)),
                           ],
                         ),
                       ),

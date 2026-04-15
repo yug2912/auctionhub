@@ -12,7 +12,20 @@
           "package_name": "com.example.auction_hub"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "889741314744-tmj8lbu3tgh8vhfeaaq9hejb9828bs89.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.auction_hub",
+            "certificate_hash": "a609dd50b6dfb13c820c0735002058af4b0ff79c"
+          }
+        },
+        {
+          "client_id": "889741314744-pn1h5mdlhskbn2cocde2196qo7plgi9d.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyAmk3lYYpfA13HBQIJbeNxnCVtsVq2q0Bo"
@@ -20,7 +33,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "889741314744-pn1h5mdlhskbn2cocde2196qo7plgi9d.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "889741314744-tnr1mfpm6svijk56n39tm3aq7qkd4tv0.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.auctionHub"
+              }
+            }
+          ]
         }
       }
     }

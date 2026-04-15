@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../data/database_helper.dart';
+import '../data/firestore_helper.dart';
+import '../data/favourites_manager.dart';
 import '../models/auction_model.dart';
 import 'auction_detail_screen.dart';
 
@@ -12,7 +14,21 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   List<Auction> _auctions = [];
+  List<Auction> _filtered = [];
   bool _loading = true;
+  String _searchQuery = '';
+  String _selectedCategory = '';
+  Set<int> _favouriteIds = {};
+
+  final List<String> _categories = [
+    'All',
+    'Cars',
+    'Furniture',
+    'Jewelry',
+    'Art',
+    'Watches',
+    'Electronics'
+  ];
 
   @override
   void initState() {
@@ -21,275 +37,333 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _loadAuctions() async {
-    final data = await DatabaseHelper.instance.getAllAuctions();
+    try {
+      final firestoreData = await FirestoreHelper.instance.getAllAuctions();
+
+      if (firestoreData.isNotEmpty) {
+        final auctionList = firestoreData.map((map) {
+          String endTimeStr = map['endTime'] ?? '';
+          String timeLeft = 'Active';
+          try {
+            if (endTimeStr.isNotEmpty && endTimeStr != '24 hours') {
+              timeLeft = FirestoreHelper.instance.getTimeLeft(endTimeStr);
+            }
+          } catch (e) {
+            timeLeft = 'Active';
+          }
+          return Auction(
+            id: map['id'].toString().hashCode,
+            title: map['title']?.toString() ?? 'Unknown',
+            category: map['category']?.toString() ?? 'Other',
+            description: map['description']?.toString() ?? '',
+            startingPrice: (map['startingBid'] ?? 0).toDouble(),
+            currentBid: (map['currentBid'] ?? 0).toDouble(),
+            endTime: timeLeft,
+            sellerName: map['sellerName']?.toString() ?? 'Unknown',
+            emoji: _getEmoji(map['category']?.toString() ?? ''),
+          );
+        }).toList();
+
+        setState(() {
+          _auctions = auctionList;
+          _filtered = auctionList;
+          _loading = false;
+        });
+      } else {
+        final data = await DatabaseHelper.instance.getAllAuctions();
+        setState(() {
+          _auctions = data;
+          _filtered = data;
+          _loading = false;
+        });
+      }
+    } catch (e) {
+      final data = await DatabaseHelper.instance.getAllAuctions();
+      setState(() {
+        _auctions = data;
+        _filtered = data;
+        _loading = false;
+      });
+    }
+  }
+
+  String _getEmoji(String category) {
+    switch (category) {
+      case 'Electronics':
+        return '💻';
+      case 'Jewelry':
+        return '💍';
+      case 'Watches':
+        return '⌚';
+      case 'Furniture':
+        return '🪑';
+      case 'Art':
+        return '🎨';
+      case 'Cars':
+        return '🚗';
+      case 'Fashion':
+        return '👗';
+      default:
+        return '🏷️';
+    }
+  }
+
+  void _search(String query) {
     setState(() {
-      _auctions = data;
-      _loading = false;
+      _searchQuery = query;
+      _applyFilters();
+    });
+  }
+
+  void _filterByCategory(String category) {
+    setState(() {
+      _selectedCategory = category == 'All' ? '' : category;
+      _applyFilters();
+    });
+  }
+
+  void _applyFilters() {
+    _filtered = _auctions.where((a) {
+      final matchSearch = _searchQuery.isEmpty ||
+          a.title.toLowerCase().contains(_searchQuery.toLowerCase());
+      final matchCategory =
+          _selectedCategory.isEmpty || a.category == _selectedCategory;
+      return matchSearch && matchCategory;
+    }).toList();
+  }
+
+  void _toggleFavourite(Auction auction) {
+    setState(() {
+      if (_favouriteIds.contains(auction.id)) {
+        _favouriteIds.remove(auction.id);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Removed from favourites'),
+            backgroundColor: Colors.grey,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      } else {
+        _favouriteIds.add(auction.id!);
+        FavouritesManager.add(auction);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Added to favourites!'),
+            backgroundColor: Color(0xFFFF6B00),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
     });
   }
 
   @override
   Widget build(BuildContext context) {
+    final textPrimary = Theme.of(context).textTheme.bodyLarge?.color;
+    final textSecondary = Theme.of(context).textTheme.bodySmall?.color;
+    final cardColor = Theme.of(context).cardColor;
+    final bgColor = Theme.of(context).scaffoldBackgroundColor;
+
     return Scaffold(
+      backgroundColor: bgColor,
+      appBar: AppBar(
+        backgroundColor: const Color(0xFFFF6B00),
+        automaticallyImplyLeading: false,
+        title: Row(
+          children: [
+            Image.asset('assets/logo.png', width: 32, height: 32),
+            const SizedBox(width: 8),
+            const Text('Auction Hub',
+                style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 18)),
+          ],
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.notifications_outlined, color: Colors.white),
+            onPressed: () {},
+          ),
+        ],
+      ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : CustomScrollView(
-              slivers: [
-                // Header
-                SliverToBoxAdapter(
-                  child: Container(
-                    color: const Color(0xFF1A237E),
-                    padding: const EdgeInsets.fromLTRB(20, 54, 20, 20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: const [
-                                Text('Welcome back,',
-                                    style: TextStyle(color: Color(0xFF9FA8DA), fontSize: 13)),
-                                Text('Arsh 👋',
-                                    style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.w600)),
-                              ],
-                            ),
-                            CircleAvatar(
-                              backgroundColor: Colors.white,
-                              child: Text('A',
-                                  style: TextStyle(
-                                      color: const Color(0xFF1A237E),
-                                      fontWeight: FontWeight.w600)),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        Row(
-                          children: [
-                            _statCard('${_auctions.length}', 'Live Auctions'),
-                            const SizedBox(width: 10),
-                            _statCard('3', 'Items Won'),
-                            const SizedBox(width: 10),
-                            _statCard('5', 'Watchlist'),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-                // Search
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: TextField(
-                      decoration: InputDecoration(
-                        hintText: 'Search auctions...',
-                        prefixIcon: const Icon(Icons.search),
-                        filled: true,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14),
-                          borderSide: BorderSide.none,
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(vertical: 12),
+          ? const Center(
+              child: CircularProgressIndicator(color: Color(0xFFFF6B00)))
+          : Column(
+              children: [
+                // Search bar
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: TextField(
+                    onChanged: _search,
+                    style: TextStyle(color: textPrimary),
+                    decoration: InputDecoration(
+                      hintText: 'Search Item......',
+                      hintStyle: TextStyle(color: textSecondary),
+                      prefixIcon: Icon(Icons.search, color: textSecondary),
+                      filled: true,
+                      fillColor: cardColor,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(30),
+                        borderSide: BorderSide.none,
                       ),
+                      contentPadding: const EdgeInsets.symmetric(vertical: 12),
                     ),
                   ),
                 ),
 
-                // Categories
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('Categories',
-                            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
-                        const SizedBox(height: 10),
-                        SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          child: Row(
-                            children: ['All', 'Electronics', 'Jewelry', 'Watches', 'Furniture', 'Art', 'Sports']
-                                .map((c) => Padding(
-                                      padding: const EdgeInsets.only(right: 8),
-                                      child: FilterChip(
-                                        label: Text(c),
-                                        selected: c == 'All',
-                                        onSelected: (_) {},
-                                      ),
-                                    ))
-                                .toList(),
+                // Category buttons
+                SizedBox(
+                  height: 40,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    itemCount: _categories.length,
+                    itemBuilder: (_, i) {
+                      final cat = _categories[i];
+                      final isSelected = cat == 'All'
+                          ? _selectedCategory.isEmpty
+                          : _selectedCategory == cat;
+                      return GestureDetector(
+                        onTap: () => _filterByCategory(cat),
+                        child: Container(
+                          margin: const EdgeInsets.only(right: 8),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: isSelected
+                                ? const Color(0xFFFF6B00)
+                                : cardColor,
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: isSelected
+                                  ? const Color(0xFFFF6B00)
+                                  : Colors.white24,
+                            ),
+                          ),
+                          child: Text(
+                            cat,
+                            style: TextStyle(
+                              color: isSelected ? Colors.white : textSecondary,
+                              fontSize: 12,
+                              fontWeight: isSelected
+                                  ? FontWeight.w600
+                                  : FontWeight.w400,
+                            ),
                           ),
                         ),
-                      ],
-                    ),
+                      );
+                    },
                   ),
                 ),
+                const SizedBox(height: 16),
 
-                // Featured Title
-                const SliverToBoxAdapter(
-                  child: Padding(
-                    padding: EdgeInsets.fromLTRB(16, 4, 16, 10),
-                    child: Text('Featured Auctions',
-                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
-                  ),
-                ),
-
-                // Auction Cards
-                SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
-                  sliver: SliverList(
-                    delegate: SliverChildBuilderDelegate(
-                      (ctx, i) => _AuctionCard(
-                        auction: _auctions[i],
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => AuctionDetailScreen(auction: _auctions[i])),
-                        ).then((_) => _loadAuctions()),
-                      ),
-                      childCount: _auctions.length,
-                    ),
-                  ),
+                // Auction list
+                Expanded(
+                  child: _filtered.isEmpty
+                      ? Center(
+                          child: Text('No auctions found',
+                              style: TextStyle(
+                                  color: textSecondary, fontSize: 15)),
+                        )
+                      : ListView.builder(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          itemCount: _filtered.length,
+                          itemBuilder: (_, i) {
+                            final a = _filtered[i];
+                            final isFav = _favouriteIds.contains(a.id);
+                            return GestureDetector(
+                              onTap: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (_) =>
+                                        AuctionDetailScreen(auction: a)),
+                              ).then((_) => _loadAuctions()),
+                              child: Container(
+                                margin: const EdgeInsets.only(bottom: 12),
+                                decoration: BoxDecoration(
+                                  color: cardColor,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      width: 90,
+                                      height: 90,
+                                      decoration: BoxDecoration(
+                                        color: bgColor,
+                                        borderRadius: const BorderRadius.only(
+                                          topLeft: Radius.circular(12),
+                                          bottomLeft: Radius.circular(12),
+                                        ),
+                                      ),
+                                      child: Center(
+                                        child: Text(a.emoji,
+                                            style:
+                                                const TextStyle(fontSize: 40)),
+                                      ),
+                                    ),
+                                    Expanded(
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(12),
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(a.title,
+                                                style: TextStyle(
+                                                    color: textPrimary,
+                                                    fontWeight: FontWeight.w600,
+                                                    fontSize: 14)),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              '\$${a.currentBid.toStringAsFixed(0)}',
+                                              style: const TextStyle(
+                                                  color: Color(0xFFFF6B00),
+                                                  fontWeight: FontWeight.w700,
+                                                  fontSize: 15),
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Row(
+                                              children: [
+                                                Icon(Icons.timer_outlined,
+                                                    size: 12,
+                                                    color: textSecondary),
+                                                const SizedBox(width: 4),
+                                                Text(a.endTime,
+                                                    style: TextStyle(
+                                                        color: textSecondary,
+                                                        fontSize: 11)),
+                                              ],
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                    Padding(
+                                      padding: const EdgeInsets.only(right: 8),
+                                      child: IconButton(
+                                        icon: Icon(
+                                          isFav
+                                              ? Icons.favorite
+                                              : Icons.favorite_outline,
+                                          color: isFav
+                                              ? const Color(0xFFFF6B00)
+                                              : textSecondary,
+                                        ),
+                                        onPressed: () => _toggleFavourite(a),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
                 ),
               ],
             ),
-    );
-  }
-
-  Widget _statCard(String value, String label) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 10),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.15),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          children: [
-            Text(value,
-                style: const TextStyle(
-                    color: Colors.white, fontSize: 20, fontWeight: FontWeight.w600)),
-            const SizedBox(height: 2),
-            Text(label,
-                style: const TextStyle(color: Color(0xFF9FA8DA), fontSize: 10)),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _AuctionCard extends StatelessWidget {
-  final Auction auction;
-  final VoidCallback onTap;
-
-  const _AuctionCard({required this.auction, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    final isEndingSoon = auction.endTime.startsWith('0h');
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      elevation: 0,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Image area
-            Container(
-              height: 110,
-              decoration: BoxDecoration(
-                color: isEndingSoon
-                    ? const Color(0xFFFCE4EC)
-                    : const Color(0xFFE3F2FD),
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-              ),
-              child: Center(
-                child: Text(auction.emoji, style: const TextStyle(fontSize: 50)),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Text(auction.title,
-                            style: const TextStyle(
-                                fontSize: 14, fontWeight: FontWeight.w600)),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: isEndingSoon
-                              ? const Color(0xFFFFF3E0)
-                              : const Color(0xFFE8F5E9),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          isEndingSoon ? 'ENDING' : 'LIVE',
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w600,
-                            color: isEndingSoon
-                                ? const Color(0xFFE65100)
-                                : const Color(0xFF2E7D32),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Text(auction.category,
-                      style: const TextStyle(fontSize: 12, color: Colors.grey)),
-                  const SizedBox(height: 8),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text('Current Bid',
-                              style: TextStyle(fontSize: 10, color: Colors.grey)),
-                          Text('\$${auction.currentBid.toStringAsFixed(0)}',
-                              style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w700,
-                                  color: Color(0xFF1A237E))),
-                        ],
-                      ),
-                      Row(
-                        children: [
-                          const Icon(Icons.timer_outlined,
-                              size: 14, color: Color(0xFFE65100)),
-                          const SizedBox(width: 4),
-                          Text(auction.endTime,
-                              style: const TextStyle(
-                                  fontSize: 12,
-                                  color: Color(0xFFE65100),
-                                  fontWeight: FontWeight.w500)),
-                        ],
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }
