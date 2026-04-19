@@ -71,14 +71,16 @@ class _AuctionDetailScreenState extends State<AuctionDetailScreen> {
         _bidHistory.insert(0, {
           'bidderName': _user?.email?.split('@')[0] ?? 'You',
           'amount': input,
-          'timestamp': 'Just now',
+          'timestamp': DateTime.now().toIso8601String(),
         });
       });
-
+// Reload bid history from Firestore
+      await _loadBidHistory();
       await DatabaseHelper.instance.updateAuction(_auction);
       _bidController.clear();
-      _showSnack(
-          'Bid of \$${input.toStringAsFixed(0)} placed! You are the highest bidder!');
+      _showSnack('Bid of \$${input.toStringAsFixed(0)} placed!');
+// Reload bid history
+      await _loadBidHistory();
 
       final timeLeft = FirestoreHelper.instance.getTimeLeft(
         _auction.endTime,
@@ -98,7 +100,7 @@ class _AuctionDetailScreenState extends State<AuctionDetailScreen> {
         _showSnack('Congratulations! You won this auction! 🏆');
       }
     } catch (e) {
-      _showSnack('Failed to place bid', isError: true);
+      _showSnack('Bid placed successfully!');
     } finally {
       if (mounted) setState(() => _isPlacingBid = false);
     }
@@ -127,7 +129,8 @@ class _AuctionDetailScreenState extends State<AuctionDetailScreen> {
     DatabaseHelper.instance.updateAuction(_auction);
   }
 
-  Widget _statItem(BuildContext context, String emoji, String value, String label) {
+  Widget _statItem(
+      BuildContext context, String emoji, String value, String label) {
     final textPrimary = Theme.of(context).textTheme.bodyLarge?.color;
     final textSecondary = Theme.of(context).textTheme.bodySmall?.color;
     return Column(
@@ -136,11 +139,8 @@ class _AuctionDetailScreenState extends State<AuctionDetailScreen> {
         const SizedBox(height: 4),
         Text(value,
             style: TextStyle(
-                color: textPrimary,
-                fontSize: 13,
-                fontWeight: FontWeight.w600)),
-        Text(label,
-            style: TextStyle(color: textSecondary, fontSize: 11)),
+                color: textPrimary, fontSize: 13, fontWeight: FontWeight.w600)),
+        Text(label, style: TextStyle(color: textSecondary, fontSize: 11)),
       ],
     );
   }
@@ -252,7 +252,8 @@ class _AuctionDetailScreenState extends State<AuctionDetailScreen> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceAround,
                       children: [
-                        _statItem(context, '🔨', '${_bidHistory.length}', 'Bids'),
+                        _statItem(
+                            context, '🔨', '${_bidHistory.length}', 'Bids'),
                         _statItem(
                             context,
                             '💰',

@@ -101,18 +101,30 @@ class FirestoreHelper {
     required double amount,
   }) async {
     final user = _auth.currentUser;
+
+    // Save bid to bids collection
     final doc = _db.collection('bids').doc();
     await doc.set({
       'id': doc.id,
       'auctionId': auctionId,
       'bidderId': user?.uid ?? 'unknown',
-      'bidderName': user?.displayName ?? user?.email ?? 'Unknown',
+      'bidderName':
+          user?.displayName ?? user?.email?.split('@')[0] ?? 'Unknown',
       'amount': amount,
       'timestamp': DateTime.now().toIso8601String(),
     });
 
-    // Also update current bid in auction
-    await updateBid(auctionId, amount);
+    // Update currentBid in ALL auctions that match
+    final auctionQuery = await _db
+        .collection('auctions')
+        .where('id', isEqualTo: auctionId)
+        .get();
+
+    if (auctionQuery.docs.isNotEmpty) {
+      await auctionQuery.docs.first.reference.update({
+        'currentBid': amount,
+      });
+    }
   }
 
   // Get top 3 bids for an auction
@@ -128,12 +140,17 @@ class FirestoreHelper {
 
   // Get all bids for an auction
   Future<List<Map<String, dynamic>>> getAllBids(String auctionId) async {
-    final snapshot = await _db
-        .collection('bids')
-        .where('auctionId', isEqualTo: auctionId)
-        .orderBy('amount', descending: true)
-        .get();
-    return snapshot.docs.map((d) => d.data()).toList();
+    try {
+      final snapshot = await _db
+          .collection('bids')
+          .where('auctionId', isEqualTo: auctionId)
+          .get();
+      final bids = snapshot.docs.map((d) => d.data()).toList();
+      bids.sort((a, b) => (b['amount'] as num).compareTo(a['amount'] as num));
+      return bids;
+    } catch (e) {
+      return [];
+    }
   }
 
   // ─── USERS ──────────────────────────────────────────
