@@ -1,3 +1,6 @@
+// Author: Jay
+// Role: UI Developer
+// Description: Screen listing auctions filtered by category with navigation to detail
 import 'package:flutter/material.dart';
 import '../data/database_helper.dart';
 import '../data/firestore_helper.dart';

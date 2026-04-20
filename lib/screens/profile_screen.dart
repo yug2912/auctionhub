@@ -1,3 +1,6 @@
+// Author: Yug
+// Role: Project Manager / Backend Developer
+// Description: User profile screen with account info and sign-out functionality
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';

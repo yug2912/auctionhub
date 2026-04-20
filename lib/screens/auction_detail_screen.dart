@@ -1,3 +1,6 @@
+// Author: Jay
+// Role: UI Developer
+// Description: Detailed view of a single auction with bidding functionality
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/auction_model.dart';

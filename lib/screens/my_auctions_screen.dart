@@ -1,3 +1,6 @@
+// Author: Yug
+// Role: Project Manager / Backend Developer
+// Description: Screen showing auctions created and managed by the current user
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../data/firestore_helper.dart';

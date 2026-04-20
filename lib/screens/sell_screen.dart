@@ -1,3 +1,6 @@
+// Author: Shiv
+// Role: UI/UX Designer
+// Description: Screen for creating and listing a new auction item for sale
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';

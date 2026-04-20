@@ -1,3 +1,6 @@
+// Author: Arsh
+// Role: Lead Developer / Repository Manager
+// Description: Splash screen shown on app launch before navigating to login
 import 'package:flutter/material.dart';
 import 'login_screen.dart';
 

@@ -1,3 +1,6 @@
+// Author: Yug
+// Role: Project Manager / Backend Developer
+// Description: In-memory manager for tracking the user's favourite auctions
 import '../models/auction_model.dart';
 
 class FavouritesManager {

@@ -1,3 +1,6 @@
+// Author: Shiv
+// Role: UI/UX Designer
+// Description: Login and registration screen with Firebase authentication
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../data/firestore_helper.dart';

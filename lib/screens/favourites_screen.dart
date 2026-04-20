@@ -1,3 +1,6 @@
+// Author: Yug
+// Role: Project Manager / Backend Developer
+// Description: Screen displaying the user's saved favourite auction items
 import 'package:flutter/material.dart';
 import '../data/favourites_manager.dart';
 import '../models/auction_model.dart';

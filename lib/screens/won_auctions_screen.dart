@@ -1,3 +1,6 @@
+// Author: Yug
+// Role: Project Manager / Backend Developer
+// Description: Screen listing auctions the current user has won
 import 'package:flutter/material.dart';
 import '../data/firestore_helper.dart';
 

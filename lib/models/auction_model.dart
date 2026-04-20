@@ -1,3 +1,6 @@
+// Author: Arsh
+// Role: Lead Developer / Repository Manager
+// Description: Data model representing an auction item
 class Auction {
   final int? id;
   final String title;

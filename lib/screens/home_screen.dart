@@ -1,3 +1,6 @@
+// Author: Jay
+// Role: UI Developer
+// Description: Home screen displaying active auctions and search/filter UI
 import 'package:flutter/material.dart';
 import '../data/database_helper.dart';
 import '../data/firestore_helper.dart';

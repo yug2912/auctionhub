@@ -1,3 +1,6 @@
+// Author: Arsh
+// Role: Lead Developer / Repository Manager
+// Description: Main screen with bottom navigation bar wiring all top-level screens
 import 'package:flutter/material.dart';
 import 'home_screen.dart';
 import 'favourites_screen.dart';

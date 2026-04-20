@@ -1,3 +1,6 @@
+// Author: Shiv
+// Role: UI/UX Designer
+// Description: Notifications screen displaying user alerts and bid updates
 import 'package:flutter/material.dart';
 
 class NotificationsScreen extends StatelessWidget {
